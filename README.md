@@ -1,4 +1,6 @@
 # Set of tools for the PN532 module using Adafruit's PN532 library
 
-this is currently heavily buggy, Im also going to provide documentation soon.
-Updates are also coming in the next few days
+current release is buggy <br>  
+DO NOT DOWNLOAD THE OFFICAL ADAFRUIT PN532 LIBRARY IF YOU WANT TO USE THIS, IT HAS MANUAL EDITS IN IT. <br>  
+
+new release & documentation coming soon.
