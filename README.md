@@ -1,2 +1,3 @@
-# pn532-tools
-pn532-tools
+# a set of tools for the PN532 NFC-Module
+
+** this will be updated shortly **
