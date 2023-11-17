@@ -130,7 +130,6 @@ void EmulateTag(){                                                              
     nfc2.PrintHex(resbuf, reslen);
     Serial.println("[> 2.] Data that got sent: ");
     nfc2.PrintHex(sendbuf, sizeof(sendbuf));
-    while(1);
   }
   delay(1000);
 }
