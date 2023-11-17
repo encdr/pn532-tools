@@ -4,7 +4,6 @@
 // BAUDRATE: needs to be 115200
 // TRANSFER: switch your PN532-module into SPI 
 
-
 #include <Arduino.h>              // used so that I can use funcs, definitions, variables from the offical Arduino IDE
 #include <Wire.h>                 // common wire library, its needed so it justs works
 #include <SPI.h>                  // we communicate over SPI, since some functions wont work over I2C 
@@ -19,6 +18,7 @@
 
 #define PN532_IRQ_I   (10)         // PIN10 for IRQ (NOT USED)
 #define PN532_RESET_I (11)         // PIN11 for RST (NOT USED)
+
 
 /// PIN-Definition for the second Arduino ///
 
@@ -43,29 +43,29 @@ void setup(void) {
   nfc.SAMConfig();                                                                    // int. sam config for rx & tx  
   nfc2.SAMConfig();                                                                   // int. sam config for rx & tx (nfc2) 
 
-  Serial.println("- - DEBUG MENU || made by kai with <3 - -");                        // intro
+  Serial.println("- - debug menu || made with <3 by kai - -");                        // intro
   Serial.println(" ");                                                                // blankspace
                                                                                                                      
-  uint32_t versiondata = nfc.getFirmwareVersion();
+  uint32_t versiondata = nfc2.getFirmwareVersion();
   if (!versiondata) {
-    Serial.print("Could not find the PN53X board, check your wiring.");
+    Serial.print("could not find the PN53X board, check your wiring.");
     while(1); 
   }
 
-  Serial.print("[>] Identified board as: PN5"); Serial.println((versiondata>>24) & 0xFF, HEX);
-  Serial.print("[>] Firmware on the chip is: "); Serial.print((versiondata>>16) & 0xFF, DEC);
+  Serial.print("[>] identified board as: pn5"); Serial.println((versiondata>>24) & 0xFF, HEX);
+  Serial.print("[>] firmware on the chip is: "); Serial.print((versiondata>>16) & 0xFF, DEC);
   Serial.print('.'); Serial.println((versiondata>>8) & 0xFF, DEC);
 
-  nfc.setPassiveActivationRetries(0xFF);                                               // sets the max. number of retry attempts, it just fancy
+  nfc2.setPassiveActivationRetries(0xFF);                                               // sets the max. number of retry attempts, it just fancy
 
   delay(200);
 
   Serial.println(" ");
   Serial.println(" - - - - - - - - - - - - - - - - - - - - - - - - - - - ");
   Serial.println(" ");
-  Serial.println("[1] Dump contents of the chip");
-  Serial.println("[2] Emulate a NFC-Tag");
-  Serial.println("[3] Send Data to another nearby PN532-Module via P2P");
+  Serial.println("[1] dump contents of the chip");
+  Serial.println("[2] emulate a blank ISO1443A nfc-tag");
+  Serial.println("[3] copy a tag and emulate it");
   Serial.println(" ");
   Serial.println(" - - - - - - - - - - - - - - - - - - - - - - - - - - - ");
 }
@@ -80,15 +80,15 @@ void ReadNFC(){                                                                 
 
   if(success) {
     Serial.println(" ");
-    Serial.println("[> 1.] Found Chip, reading info...");
-    Serial.print("[> 1.] UID Length: "); Serial.print(uidLength, DEC); Serial.println(" bytes");
-    Serial.print("[> 1.] UID Value: ");
+    Serial.println("[..] found chip, reading info...");
+    Serial.print("[..] uid length: "); Serial.print(uidLength, DEC); Serial.println(" bytes");
+    Serial.print("[..] uid value: ");
     nfc.PrintHex(uid, uidLength);
 
     if (uidLength == 7)
     {
       uint8_t data[32];
-      Serial.println("[> 1.] Chip identified as a NTAG215/216/217");
+      Serial.println("[..] chip identified as a NTAG215/216/217");
       Serial.println(" ");
       Serial.println(" - - - - - - - - - - - - - - - - - - - - - - - - - - - ");
       Serial.println(" ");
@@ -102,53 +102,90 @@ void ReadNFC(){                                                                 
         }
         else
         {
-          Serial.println("[?] Could not read the requested PAGE of the chip, try again & hold still!");
+          Serial.println("[?] could not read the requested PAGE of the chip, try again & hold still!");
         }
       }
     }
     else
     {
       Serial.println(" ");
-      Serial.println("[!] Size differs from expected value --> This is not an NTAG2XX chip");
+      Serial.println("[!] size differs from expected value --> this is not an NTAG2XX chip");
     }
   }
 }
 
-void EmulateTag(){                                                                     // emulates an NFC-Tag, currently a ISO-14443-4 (which we need, it w0rks!)
+void EmulateBlankTag(){                                                               // emulates an NFC-Tag, currently a ISO-14443-4 (which we need, it w0rks!)
   
-  uint8_t sendbuf[] = {0x04, 0x03, 0x02, 0x01};
-  uint8_t resbuf[16];
+  uint8_t sendbuf[] = {0x04, 0x03, 0x02, 0x01};                                       // UID-format of a NTAG215 chip   
+  uint8_t resbuf[42];                                                                 // buffersize that holds the chip
   uint8_t reslen;
 
   if(nfc2.TgInitAsTarget()) {
-    Serial.println("[> 2.] Emulation started successfully!");
+    Serial.println("[..] emulation started successfully!");
     if(!nfc2.TgGetData(resbuf, &reslen)) {
-      Serial.println("[!] Failed to get Data");
+      Serial.println("[!] failed to get Data");
     }
     nfc2.TgSetData(sendbuf, sizeof(sendbuf));
-    Serial.print("[> 2.] Got following Response: ");
+    Serial.print("[..] got following Response: ");
     nfc2.PrintHex(resbuf, reslen);
-    Serial.println("[> 2.] Data that got sent: ");
+    Serial.println("[..] data that got sent: ");
     nfc2.PrintHex(sendbuf, sizeof(sendbuf));
   }
   delay(1000);
 }
 
+void Extend(){
+
+  uint8_t uid[] = { 0, 0, 0, 0, 0, 0, 0 };  
+  uint8_t uidLength;
+  uint8_t emulatedexpect;
+
+  emulatedexpect = nfc.readPassiveTargetID(PN532_MIFARE_ISO14443A, uid, &uidLength);   
+
+  if(emulatedexpect){
+
+    if(uidLength == 7){
+      uint8_t data[16];
+      Serial.println("[..] compatible chip layer found!");
+
+    for (uint8_t i = 0; i < 42; i++)
+    {
+      nfc.ntag2xx_ReadPage(i, data);
+    }
+
+    /* this is very w.i.p, as it dosent seem to work when you set the variables in the library to represent a MIFARE 1443A*/
+
+    Serial.println("[..] copying contents of the chip");
+    Serial.println("[..] initialzing #2 nfc-module as host");
+    nfc2.TgInitAsTarget();                                                                  // init. nfc-module as host machine
+    nfc2.TgSetData(data, sizeof(data));                                                     // set host data to that what we have read in the beginning
+    Serial.println("[..] setting data 1:1 as the tag");
+    Serial.println("[..] emulation started successfully started!");
+    }
+  }
+}
+
 void DebugMenu(){
 
-  if (Serial.read() == '1')                                                             // fancy debug menu listener, almost a hidden keylogger haha
-  { 
+    if (Serial.read() == '1'){                                                              // fancy debug menu listener, almost a hidden keylogger haha 
     Serial.println(" ");
-    Serial.print("[> 1.] Please hold the chip in front of the reader");
+    Serial.print("[> 1.] please hold your nfc-chip in against of the reader");
     Serial.println(" ");
     ReadNFC();
   }
   else if (Serial.read() == '2')
   {
     Serial.println(" ");
-    Serial.print("[> 2.] Please hold your reader against the PN532 Module");
+    Serial.print("[> 2.] please hold your reader against the PN532 Module");
     Serial.println(" ");
-    EmulateTag();
+    EmulateBlankTag();
+  }
+  else if (Serial.read() == '3')
+  {
+    Serial.println(" ");
+    Serial.print("[> 3.] please hold your nfc-tag against the reader");
+    Serial.println(" ");
+    Extend();
   }
 }
 
