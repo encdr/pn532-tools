@@ -799,17 +799,16 @@ bool Adafruit_PN532::TgInitAsTarget() {
 	PN532_COMMAND_TGINITASTARGET, 
   0x8C,                   // this flag is required, if not set then it wont get recognized!                   
 	0x05,               	  // Mode: PICC only & Passive only
-	0x08, 0x00, 0x00, 0x00, // SENS_RES (now detects as ISO1443-A)
-	0x12, 0x34, 0x56,   	  // NFCID1
+	0x00, 0x4, 0x2, 0x0,    // SENS_RES (now detects as ISO1443-A) <--- SERIAL NUMBER
+	0x08, 0x34, 0x56,   	  // NFCID1
 	0x60,               	  // SEL_RES
-	0,0,0,0,0,0,0,0,0,		  // FeliCaParams
+	0,0,0,0,0,0,0,0,0,      // FeliCaParams
 	0,0,0,0,0,0,0,0,0,
 	0,0,0,0,0,0,0,0,0,0,	  // NFCID3t
 	0, 						          // length of general bytes
-	0  						          // length of historical bytes
+	0,  						        // length of historical bytes
   };
  
-
   if (!sendCommandCheckAck(cmd, sizeof(cmd), 1000)) {
 	#ifdef PN532DEBUG
 	  PN532DEBUGPRINT.print(F("Failed at sendCommandCheckAck command"));
