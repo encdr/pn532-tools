@@ -34,7 +34,7 @@ Adafruit_PN532 nfc(PN532_SCK_I, PN532_MISO_I, PN532_MOSI_I, PN532_SS_I);        
 Adafruit_PN532 nfc2(PN532_SCK_II, PN532_MISO_II, PN532_MOSI_II, PN532_SS_II);         // second PN532 module     
 
 void setup(void) {    
-  Serial.begin(115200);                                                               // 115200 Baudrate, cause its blazingly f a s t 
+  Serial.begin(115200);                                                               // 115200 Baudrate, cause its blazingly f a s t (and Adafruit's library needs it lol)
   delay(2000);                                                                        // lazy fix, so the text is not displayed multiple times when uploading to the Arduino
   while (!Serial) delay(10);
 
@@ -116,17 +116,17 @@ void ReadNFC(){                                                                 
 
 void EmulateBlankTag(){                                                               // emulates an NFC-Tag, currently a ISO-14443-4 (which we need, it w0rks!)
   
-  uint8_t sendbuf[] = {0x04, 0x03, 0x02, 0x01};                                       // UID-format of a NTAG215 chip   
+  uint8_t sendbuf[] = {0x04, 0x03, 0x02, 0x01};                                       // UID-format of a NTAG216 chip   
   uint8_t resbuf[42];                                                                 // buffersize that holds the chip
   uint8_t reslen;
 
   if(nfc2.TgInitAsTarget()) {
     Serial.println("[..] emulation started successfully!");
     if(!nfc2.TgGetData(resbuf, &reslen)) {
-      Serial.println("[!] failed to get Data");
+      Serial.println("[!] failed to get data");
     }
     nfc2.TgSetData(sendbuf, sizeof(sendbuf));
-    Serial.print("[..] got following Response: ");
+    Serial.print("[..] got following response: ");
     nfc2.PrintHex(resbuf, reslen);
     Serial.println("[..] data that got sent: ");
     nfc2.PrintHex(sendbuf, sizeof(sendbuf));
@@ -139,6 +139,7 @@ void Extend(){
   uint8_t uid[] = { 0, 0, 0, 0, 0, 0, 0 };  
   uint8_t uidLength;
   uint8_t emulatedexpect;
+  uint8_t buffer[42];
 
   emulatedexpect = nfc.readPassiveTargetID(PN532_MIFARE_ISO14443A, uid, &uidLength);   
 
@@ -151,6 +152,7 @@ void Extend(){
     for (uint8_t i = 0; i < 42; i++)
     {
       nfc.ntag2xx_ReadPage(i, data);
+      nfc2.TgSetData(i, sizeof(data));  
     }
 
     /* this is very w.i.p, as it dosent seem to work when you set the variables in the library to represent a MIFARE 1443A*/
@@ -158,37 +160,37 @@ void Extend(){
     Serial.println("[..] copying contents of the chip");
     Serial.println("[..] initialzing #2 nfc-module as host");
     nfc2.TgInitAsTarget();                                                                  // init. nfc-module as host machine
-    nfc2.TgSetData(data, sizeof(data));                                                     // set host data to that what we have read in the beginning
+    //nfc2.TgSetData(data, sizeof(data));                                                // set host data to that what we have read in the beginning
     Serial.println("[..] setting data 1:1 as the tag");
     Serial.println("[..] emulation started successfully started!");
     }
   }
 }
 
-void DebugMenu(){
+void DebugMenu(){  // fancy debug menu listener, almost a hidden keylogger haha 
 
-    if (Serial.read() == '1'){                                                              // fancy debug menu listener, almost a hidden keylogger haha 
+    if (Serial.read() == '1'){                         // read nfc-tag                                     
     Serial.println(" ");
     Serial.print("[> 1.] please hold your nfc-chip in against of the reader");
     Serial.println(" ");
     ReadNFC();
   }
-  else if (Serial.read() == '2')
+  else if (Serial.read() == '2')                      // emulate a blank nfc-tag
   {
     Serial.println(" ");
     Serial.print("[> 2.] please hold your reader against the PN532 Module");
     Serial.println(" ");
     EmulateBlankTag();
   }
-  else if (Serial.read() == '3')
+  else if (Serial.read() == '3')                     //copy and emulate that nfc tag
   {
     Serial.println(" ");
-    Serial.print("[> 3.] please hold your nfc-tag against the reader");
+    Serial.print("[> 3.] please hold your nfc-tag against the first reader");
     Serial.println(" ");
     Extend();
   }
 }
 
-void loop(void) {                                                                       // definitions must be declared before the void loop starts, otherwise these cannot get called
+void loop(void) {    // definitions must be declared before the void loop starts, otherwise these cannot get called
   DebugMenu();
 } 
